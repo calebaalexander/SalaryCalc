@@ -23,21 +23,66 @@ def calculate_fica(salary):
     
     return social_security + medicare
 
-def calculate_budget(take_home_pay):
-    monthly_income = take_home_pay / 12
-    
-    # 50/30/20 Rule
-    necessities = monthly_income * 0.5
-    wants = monthly_income * 0.3
-    savings = monthly_income * 0.2
-    
-    budget_breakdown = {
-        'Category': ['Necessities', 'Wants', 'Savings'],
-        'Amount': [necessities, wants, savings],
-        'Percentage': [50, 30, 20]
+def calculate_detailed_budget(monthly_income):
+    # Define category percentages
+    needs_breakdown = {
+        "Housing (Rent/Mortgage)": 0.15,
+        "Utilities": 0.05,
+        "Groceries": 0.08,
+        "Transportation": 0.06,
+        "Insurance": 0.05,
+        "Healthcare": 0.04,
+        "Minimum Debt Payments": 0.04,
+        "Childcare/Education": 0.03
     }
     
-    return pd.DataFrame(budget_breakdown)
+    wants_breakdown = {
+        "Dining Out": 0.06,
+        "Entertainment": 0.06,
+        "Travel": 0.06,
+        "Hobbies": 0.04,
+        "Shopping": 0.05,
+        "Luxury Upgrades": 0.03
+    }
+    
+    savings_breakdown = {
+        "Emergency Fund": 0.06,
+        "Retirement": 0.06,
+        "Investments": 0.03,
+        "Debt Repayment": 0.03,
+        "Future Goals": 0.02
+    }
+    
+    # Calculate amounts for each category
+    budget_data = {
+        'Category': [],
+        'Main Category': [],
+        'Amount': [],
+        'Percentage': []
+    }
+    
+    # Add needs
+    for category, percentage in needs_breakdown.items():
+        budget_data['Category'].append(category)
+        budget_data['Main Category'].append('Needs')
+        budget_data['Amount'].append(monthly_income * percentage)
+        budget_data['Percentage'].append(percentage * 100)
+    
+    # Add wants
+    for category, percentage in wants_breakdown.items():
+        budget_data['Category'].append(category)
+        budget_data['Main Category'].append('Wants')
+        budget_data['Amount'].append(monthly_income * percentage)
+        budget_data['Percentage'].append(percentage * 100)
+    
+    # Add savings
+    for category, percentage in savings_breakdown.items():
+        budget_data['Category'].append(category)
+        budget_data['Main Category'].append('Savings')
+        budget_data['Amount'].append(monthly_income * percentage)
+        budget_data['Percentage'].append(percentage * 100)
+    
+    return pd.DataFrame(budget_data)
 
 def main():
     st.title("SalaryCalc - Salary & Budget Calculator")
@@ -123,66 +168,102 @@ def main():
         }))
 
     with col2:
-        fig = px.pie(breakdown_df, values='Amount', names='Category', title='Salary Breakdown')
+        fig = px.pie(breakdown_df, values='Amount', names='Category', 
+                    title='Salary Breakdown')
         st.plotly_chart(fig)
 
-    # Budget Planning (50/30/20 Rule)
-    st.header("Budget Planning (50/30/20 Rule)")
-    budget_df = calculate_budget(take_home)
+    # Detailed Budget Planning
+    st.header("Detailed Budget Planning")
+    budget_df = calculate_detailed_budget(take_home_monthly)
+    
+    # Summary by main category
+    summary_df = budget_df.groupby('Main Category').agg({
+        'Amount': 'sum',
+        'Percentage': 'sum'
+    }).reset_index()
     
     col3, col4 = st.columns(2)
     
     with col3:
-        st.dataframe(budget_df.style.format({
+        st.subheader("Budget Summary")
+        st.dataframe(summary_df.style.format({
             'Amount': '${:,.2f}',
-            'Percentage': '{:.0f}%'
+            'Percentage': '{:.1f}%'
         }))
     
     with col4:
-        budget_fig = px.pie(budget_df, values='Amount', names='Category', 
-                          title='Recommended Budget Allocation')
-        st.plotly_chart(budget_fig)
+        summary_fig = px.pie(summary_df, values='Amount', names='Main Category', 
+                           title='Budget Distribution')
+        st.plotly_chart(summary_fig)
 
-    # Budget Details
-    st.subheader("Suggested Monthly Budget Breakdown")
+    # Detailed Budget Breakdown
+    st.subheader("Detailed Monthly Budget Breakdown")
     
-    with st.expander("Necessities (50%)"):
-        st.write("""
-        - 🏠 Housing (30%): ${:,.2f}
-        - 🥘 Groceries (10%): ${:,.2f}
-        - 🚗 Transportation (5%): ${:,.2f}
-        - 💊 Healthcare (5%): ${:,.2f}
-        """.format(
-            take_home_monthly * 0.3,
-            take_home_monthly * 0.1,
-            take_home_monthly * 0.05,
-            take_home_monthly * 0.05
-        ))
+    # Create tabs for each main category
+    needs_tab, wants_tab, savings_tab = st.tabs(["Needs (50%)", "Wants (30%)", "Savings (20%)"])
     
-    with st.expander("Wants (30%)"):
-        st.write("""
-        - 🎭 Entertainment (10%): ${:,.2f}
-        - 🛍️ Shopping (10%): ${:,.2f}
-        - 🍽️ Dining Out (5%): ${:,.2f}
-        - 🏋️ Health & Fitness (5%): ${:,.2f}
-        """.format(
-            take_home_monthly * 0.1,
-            take_home_monthly * 0.1,
-            take_home_monthly * 0.05,
-            take_home_monthly * 0.05
-        ))
+    with needs_tab:
+        needs_df = budget_df[budget_df['Main Category'] == 'Needs']
+        st.dataframe(needs_df[['Category', 'Amount', 'Percentage']].style.format({
+            'Amount': '${:,.2f}',
+            'Percentage': '{:.1f}%'
+        }))
+        
+        needs_fig = px.pie(needs_df, values='Amount', names='Category', 
+                          title='Needs Breakdown')
+        st.plotly_chart(needs_fig)
     
-    with st.expander("Savings (20%)"):
-        st.write("""
-        - 💰 Emergency Fund (10%): ${:,.2f}
-        - 📈 Investments (5%): ${:,.2f}
-        - 🎯 Financial Goals (5%): ${:,.2f}
-        """.format(
-            take_home_monthly * 0.1,
-            take_home_monthly * 0.05,
-            take_home_monthly * 0.05
-        ))
+    with wants_tab:
+        wants_df = budget_df[budget_df['Main Category'] == 'Wants']
+        st.dataframe(wants_df[['Category', 'Amount', 'Percentage']].style.format({
+            'Amount': '${:,.2f}',
+            'Percentage': '{:.1f}%'
+        }))
+        
+        wants_fig = px.pie(wants_df, values='Amount', names='Category', 
+                          title='Wants Breakdown')
+        st.plotly_chart(wants_fig)
+    
+    with savings_tab:
+        savings_df = budget_df[budget_df['Main Category'] == 'Savings']
+        st.dataframe(savings_df[['Category', 'Amount', 'Percentage']].style.format({
+            'Amount': '${:,.2f}',
+            'Percentage': '{:.1f}%'
+        }))
+        
+        savings_fig = px.pie(savings_df, values='Amount', names='Category', 
+                           title='Savings Breakdown')
+        st.plotly_chart(savings_fig)
+
+    # Budget Tips
+    with st.expander("💡 Budgeting Tips"):
+        st.markdown("""
+        ### Tips for Managing Your Budget:
+        
+        #### Needs (50%):
+        - Consider house-hacking or getting a roommate to reduce housing costs
+        - Look for utility savings through energy-efficient upgrades
+        - Use meal planning to optimize grocery spending
+        - Consider public transportation or carpooling options
+        
+        #### Wants (30%):
+        - Use cashback cards for dining and entertainment
+        - Look for travel deals during off-peak seasons
+        - Consider monthly memberships for frequent activities
+        - Create a shopping list and stick to it
+        
+        #### Savings (20%):
+        - Set up automatic transfers to your savings accounts
+        - Take full advantage of employer 401(k) matching
+        - Consider index funds for long-term investments
+        - Build emergency fund before focusing on extra debt payments
+        """)
 
 if __name__ == "__main__":
-    st.set_page_config(page_title="SalaryCalc", page_icon="💰", layout="wide")
+    st.set_page_config(
+        page_title="SalaryCalc",
+        page_icon="💰",
+        layout="wide",
+        initial_sidebar_state="expanded"
+    )
     main()
