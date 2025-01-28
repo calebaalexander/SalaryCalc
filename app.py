@@ -23,7 +23,7 @@ def calculate_fica(salary):
     
     return social_security + medicare
 
-def calculate_detailed_budget(monthly_income):
+def calculate_detailed_budget(income, frequency):
     # Define category percentages
     needs_breakdown = {
         "Housing (Rent/Mortgage)": 0.15,
@@ -103,7 +103,7 @@ def main():
         
         # Pay Type and Frequency
         pay_type = st.radio("Type", ("Hourly", "Salary"), horizontal=True)
-        pay_frequency = st.selectbox("Pay Frequency", ["Monthly", "Bi-weekly", "Weekly"])
+        pay_frequency = st.selectbox("Pay Frequency", ["Monthly", "Semi-Monthly", "Bi-weekly", "Weekly"])
         
         # Allowances
         st.subheader("Allowances")
@@ -136,15 +136,23 @@ def main():
         taxes = 0
         fica = 0
 
-    # Calculate take-home pay
-    gross_monthly = salary / 12
+    # Calculate take-home pay based on frequency
     total_deductions = taxes + fica
     take_home = salary - total_deductions
-    take_home_monthly = take_home / 12
+    
+    pay_frequency_divisor = {
+        "Monthly": 12,
+        "Semi-Monthly": 24,
+        "Bi-weekly": 26,
+        "Weekly": 52
+    }
+    
+    divisor = pay_frequency_divisor[pay_frequency]
+    periodic_take_home = take_home / divisor
 
     # Display results
-    st.header("Your estimated monthly take home pay:")
-    st.subheader(f"${take_home_monthly:,.2f}")
+    st.header(f"Your estimated {pay_frequency.lower()} take home pay:")
+    st.subheader(f"${periodic_take_home:,.2f}")
 
     # Where is your money going?
     st.header("Where is your money going?")
@@ -172,31 +180,9 @@ def main():
                     title='Salary Breakdown')
         st.plotly_chart(fig)
 
-    # Detailed Budget Planning
-    st.header("Detailed Budget Planning")
-    budget_df = calculate_detailed_budget(take_home_monthly)
-    
-    # Summary by main category
-    summary_df = budget_df.groupby('Main Category').agg({
-        'Amount': 'sum',
-        'Percentage': 'sum'
-    }).reset_index()
-    
-    col3, col4 = st.columns(2)
-    
-    with col3:
-        st.subheader("Budget Summary")
-        st.dataframe(summary_df.style.format({
-            'Amount': '${:,.2f}',
-            'Percentage': '{:.1f}%'
-        }))
-    
-    with col4:
-        summary_fig = px.pie(summary_df, values='Amount', names='Main Category', 
-                           title='Budget Distribution')
-        st.plotly_chart(summary_fig)
-
     # Detailed Budget Breakdown
+    st.header(f"Detailed {pay_frequency} Budget Breakdown")
+    budget_df = calculate_detailed_budget(periodic_take_home, pay_frequency)
     st.subheader("Detailed Monthly Budget Breakdown")
     
     # Create tabs for each main category
@@ -206,7 +192,7 @@ def main():
         needs_df = budget_df[budget_df['Main Category'] == 'Needs']
         st.dataframe(needs_df[['Category', 'Amount', 'Percentage']].style.format({
             'Amount': '${:,.2f}',
-            'Percentage': '{:.1f}%'
+            'Percentage': '{:.0f}%'
         }))
         
         needs_fig = px.pie(needs_df, values='Amount', names='Category', 
