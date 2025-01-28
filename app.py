@@ -7,13 +7,53 @@ def round_to_nearest(number):
     return int(round(number))
 
 def calculate_taxes(salary, marital_status, allowances):
-    federal_tax_rate = 0.22
+    # 2024 Federal Tax Brackets
+    single_brackets = [
+        (11600, 0.10),    # Standard deduction for single
+        (44725, 0.12),
+        (95375, 0.22),
+        (182100, 0.24),
+        (231250, 0.32),
+        (578125, 0.35),
+        (float('inf'), 0.37)
+    ]
+    
+    married_brackets = [
+        (23200, 0.10),    # Standard deduction for married
+        (89450, 0.12),
+        (190750, 0.22),
+        (364200, 0.24),
+        (462500, 0.32),
+        (693750, 0.35),
+        (float('inf'), 0.37)
+    ]
+    
+    brackets = married_brackets if marital_status == "Married" else single_brackets
+    standard_deduction = 23200 if marital_status == "Married" else 11600
+    
+    # Calculate federal tax using progressive brackets
+    federal_tax = 0
+    prev_bracket = 0
+    taxable_income = max(salary - standard_deduction, 0)  # Apply standard deduction
+    
+    for bracket, rate in brackets:
+        if taxable_income > prev_bracket:
+            taxable_amount = min(taxable_income - prev_bracket, bracket - prev_bracket)
+            federal_tax += taxable_amount * rate
+        prev_bracket = bracket
+    
+    # Adjust for allowances
+    federal_tax = round_to_nearest(federal_tax * (1 - 0.1 * allowances['federal']))
+    
+    # State and local taxes (simplified - could be enhanced with state-specific brackets)
     state_tax_rate = 0.05
     local_tax_rate = 0.01
     
-    federal_tax = round_to_nearest(salary * federal_tax_rate * (1 - 0.1 * allowances['federal']))
     state_tax = round_to_nearest(salary * state_tax_rate * (1 - 0.1 * allowances['state']))
     local_tax = round_to_nearest(salary * local_tax_rate * (1 - 0.1 * allowances['local']))
+    
+    # Return total taxes
+    return federal_tax + state_tax + local_tax
     
     return federal_tax + state_tax + local_tax
 
@@ -27,7 +67,7 @@ def calculate_fica(salary):
     return social_security + medicare
 
 def main():
-    st.title("SalaryCalc - Salary & Budget Calculator")
+    st.markdown("# **Salary & Budget Calculator**")
     
     # Sidebar for inputs
     with st.sidebar:
