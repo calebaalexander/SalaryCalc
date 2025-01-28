@@ -99,7 +99,7 @@ def main():
 
     # Main content
     if pay_type == "Salary":
-        salary = st.number_input("Salary (per year)", min_value=0, value=131000)
+        salary = st.number_input("Salary (per year)", min_value=0, value=100000)
     else:
         hourly_rate = st.number_input("Hourly Rate", min_value=0.0, value=15.0)
         hours_per_week = st.number_input("Hours per Week", min_value=0.0, value=40.0)
